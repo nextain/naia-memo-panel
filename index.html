@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Naia Memo Panel</title>
+    <style>
+      :root {
+        --espresso-dark: #14110f;
+        --espresso: #1f1a17;
+        --espresso-light: #2a231f;
+        --cream: #f5ead6;
+        --accent: #c9a96e;
+        --muted: rgba(245, 234, 214, 0.55);
+        --danger: #ef5350;
+      }
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0; height: 100%;
+        background: var(--espresso-dark); color: var(--cream);
+        font: 14px/1.5 system-ui, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+      }
+      .memo-panel {
+        display: flex; flex-direction: column; height: 100vh;
+        max-width: 720px; margin: 0 auto; padding: 18px 20px 14px;
+      }
+      .memo-panel__header { display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; }
+      .memo-panel__title { font-size: 18px; font-weight: 650; }
+      .memo-panel__hint { font-size: 12px; color: var(--muted); }
+      .memo-form { display: flex; gap: 8px; margin-bottom: 12px; }
+      .memo-form input {
+        flex: 1; padding: 10px 12px; border-radius: 9px;
+        background: var(--espresso-light); color: var(--cream);
+        border: 1px solid rgba(201, 169, 110, 0.18); outline: none;
+      }
+      .memo-form input:focus { border-color: var(--accent); }
+      .memo-form button {
+        padding: 0 16px; border: none; cursor: pointer; border-radius: 9px;
+        background: var(--accent); color: var(--espresso-dark); font-weight: 700;
+      }
+      .memo-list { flex: 1; overflow: auto; display: flex; flex-direction: column; gap: 8px; }
+      .memo-item {
+        display: flex; align-items: flex-start; gap: 10px; padding: 11px 13px;
+        background: var(--espresso); border-radius: 10px;
+        border: 1px solid rgba(245, 234, 214, 0.06);
+      }
+      .memo-item__text { flex: 1; white-space: pre-wrap; word-break: break-word; }
+      .memo-item__time { font-size: 11px; color: var(--muted); flex: none; margin-top: 2px; }
+      .memo-item__del {
+        flex: none; background: none; border: none; cursor: pointer;
+        color: var(--muted); font-size: 16px; line-height: 1; padding: 2px 4px; border-radius: 6px;
+      }
+      .memo-item__del:hover { color: var(--danger); background: rgba(239, 83, 80, 0.12); }
+      .memo-empty { color: var(--muted); font-size: 13px; padding: 20px 4px; }
+      .memo-foot { font-size: 11px; color: var(--muted); margin-top: 10px; }
+    </style>
+  </head>
+  <body>
+    <div class="memo-panel">
+      <div class="memo-panel__header">
+        <span class="memo-panel__title">📝 <span data-i18n="title">메모</span></span>
+        <span class="memo-panel__hint" data-i18n="hint">Naia에게 “메모 보여줘”라고 말해보세요</span>
+      </div>
+      <form class="memo-form" id="form">
+        <input id="input" data-i18n-ph="ph" placeholder="메모를 입력하고 추가…" autocomplete="off" />
+        <button type="submit" data-i18n="add">추가</button>
+      </form>
+      <div class="memo-list" id="list"></div>
+      <div class="memo-foot" data-i18n="foot">로컬에만 저장됩니다 · 설치형 패널 예제</div>
+    </div>
+
+    <script>
+      // Minimal i18n — driven by ?lang= or document language.
+      var I18N = {
+        ko: { title: "메모", hint: "Naia에게 “메모 보여줘”라고 말해보세요", ph: "메모를 입력하고 추가…", add: "추가", del: "삭제", empty: "아직 메모가 없습니다.", foot: "로컬에만 저장됩니다 · 설치형 패널 예제" },
+        en: { title: "Memo", hint: 'Try asking Naia “show my memos”', ph: "Type a memo and add…", add: "Add", del: "Delete", empty: "No memos yet.", foot: "Stored locally only · installable panel sample" },
+      };
+      var lang = new URLSearchParams(location.search).get("lang") || (document.documentElement.lang || "ko");
+      if (!I18N[lang]) lang = "ko";
+      var t = I18N[lang];
+      ["title","hint","add","del","foot"].forEach(function (k) {
+        document.querySelectorAll('[data-i18n="' + k + '"]').forEach(function (el) { el.textContent = t[k]; });
+      });
+      document.querySelectorAll("[data-i18n-ph]").forEach(function (el) { el.placeholder = t.ph; });
+
+      var KEY = "naia-memo-panel:memos";
+      var memos = [];
+      try { memos = JSON.parse(localStorage.getItem(KEY) || "[]"); } catch (e) { memos = []; }
+
+      var list = document.getElementById("list");
+      var input = document.getElementById("input");
+
+      function save() { try { localStorage.setItem(KEY, JSON.stringify(memos)); } catch (e) {} }
+
+      function fmt(ts) {
+        var d = new Date(ts);
+        function p(n) { return n < 10 ? "0" + n : n; }
+        return p(d.getMonth() + 1) + "-" + p(d.getDate()) + " " + p(d.getHours()) + ":" + p(d.getMinutes());
+      }
+
+      function render() {
+        list.innerHTML = "";
+        if (memos.length === 0) {
+          var e = document.createElement("div");
+          e.className = "memo-empty";
+          e.textContent = t.empty;
+          list.appendChild(e);
+          return;
+        }
+        memos.forEach(function (m, i) {
+          var row = document.createElement("div");
+          row.className = "memo-item";
+          var text = document.createElement("div");
+          text.className = "memo-item__text";
+          text.textContent = m.text;
+          var time = document.createElement("div");
+          time.className = "memo-item__time";
+          time.textContent = fmt(m.ts);
+          var del = document.createElement("button");
+          del.className = "memo-item__del";
+          del.title = t.del;
+          del.textContent = "×";
+          del.addEventListener("click", function () { memos.splice(i, 1); save(); render(); });
+          row.appendChild(text); row.appendChild(time); row.appendChild(del);
+          list.appendChild(row);
+        });
+      }
+
+      document.getElementById("form").addEventListener("submit", function (ev) {
+        ev.preventDefault();
+        var v = input.value.trim();
+        if (!v) return;
+        memos.unshift({ text: v, ts: Date.now() });
+        input.value = "";
+        save(); render();
+      });
+
+      // Seed with example content on first run so the panel is never empty in a screenshot.
+      if (memos.length === 0 && !localStorage.getItem(KEY)) {
+        memos = [
+          { text: "13장 naia-omni 모델 변경 설명 보강", ts: Date.now() - 1000 * 60 * 42 },
+          { text: "14장 패널 탭 스크린샷 교체 — 메모 패널로 교체", ts: Date.now() - 1000 * 60 * 18 },
+          { text: "Naia에게 이 메모를 읽어달라고 해보자", ts: Date.now() - 1000 * 60 * 3 },
+        ];
+        save();
+      }
+      render();
+    </script>
+  </body>
+</html>

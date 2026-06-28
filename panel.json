@@ -1,0 +1,12 @@
+{
+  "id": "memo",
+  "name": "Memo",
+  "names": {
+    "ko": "메모",
+    "en": "Memo"
+  },
+  "version": "0.1.0",
+  "description": "Minimal installable panel — a local notepad persisted in the browser. A reference template for third-party naia panels (Git URL / Zip install).",
+  "icon": "📝",
+  "iconUrl": "icon.svg"
+}
