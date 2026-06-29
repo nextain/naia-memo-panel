@@ -69,6 +69,7 @@
       <div class="memo-foot" data-i18n="foot">로컬에만 저장됩니다 · 설치형 패널 예제</div>
     </div>
 
+    <script src="naia-panel.js"></script>
     <script>
       // Minimal i18n — driven by ?lang= or document language.
       var I18N = {
@@ -145,6 +146,29 @@
         save();
       }
       render();
+
+      // ── AI tool handlers (routed from the Shell via naia-panel.js) ──
+      // The Shell calls these when Naia invokes skill_memo_read / skill_memo_write.
+      NaiaPanel.onTool("skill_memo_read", () => {
+        if (memos.length === 0)
+          return lang === "en" ? "(no memos)" : "(메모가 없습니다)";
+        return memos
+          .map(function (m) { return "[" + fmt(m.ts) + "] " + m.text; })
+          .join("\n");
+      });
+      NaiaPanel.onTool("skill_memo_write", (args) => {
+        var action = (args && args.action) || "add";
+        if (action === "clear") {
+          var n = memos.length;
+          memos = []; save(); render();
+          return (lang === "en" ? "Cleared " : "") + n + (lang === "en" ? " memo(s)." : "건의 메모를 삭제했습니다.");
+        }
+        var text = String((args && args.text) || "").trim();
+        if (!text) return "error: text is required for action=add";
+        memos.unshift({ text: text, ts: Date.now() });
+        save(); render();
+        return lang === "en" ? 'Added memo: "' + text + '"' : '메모를 추가했습니다: "' + text + '"';
+      });
     </script>
   </body>
 </html>

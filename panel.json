@@ -5,8 +5,29 @@
     "ko": "메모",
     "en": "Memo"
   },
-  "version": "0.1.0",
-  "description": "Minimal installable panel — a local notepad persisted in the browser. A reference template for third-party naia panels (Git URL / Zip install).",
+  "version": "0.2.0",
+  "description": "Minimal installable naia panel — a local notepad the AI can read and write. Reference template for third-party naia panels (Git URL / Zip install).",
   "icon": "📝",
-  "iconUrl": "icon.svg"
+  "iconUrl": "icon.svg",
+  "tools": [
+    {
+      "name": "skill_memo_read",
+      "description": "Read all memos from the Memo panel. Returns each memo with its timestamp, newest first.",
+      "parameters": { "type": "object", "properties": {} },
+      "tier": 0
+    },
+    {
+      "name": "skill_memo_write",
+      "description": "Add a memo, or clear all memos. The change appears in the Memo panel immediately.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "text": { "type": "string", "description": "The memo text to add (required when action=add)." },
+          "action": { "type": "string", "enum": ["add", "clear"], "description": "add (default) appends a memo; clear removes every memo." }
+        },
+        "required": ["text"]
+      },
+      "tier": 1
+    }
+  ]
 }
